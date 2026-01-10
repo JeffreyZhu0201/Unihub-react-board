@@ -60,9 +60,9 @@ export function GlobalAlertProvider({ children }: { children: ReactNode }) {
                     </svg>
                   )}
                 </div>
-                <div className="ml-3 w-0 flex-1 pt-0.5">
-                  <p className="text-sm font-medium text-gray-900">{title}</p>
-                  <p className="mt-1 text-sm text-gray-500">{content}</p>
+                <div className="ml-3 flex-1 flex items-center gap-4">
+                  <p className="text-sm font-medium text-gray-900 whitespace-nowrap">{title}</p>
+                  <p className="text-sm text-gray-500 truncate">{content}</p>
                 </div>
                 <div className="ml-4 flex-shrink-0 flex">
                   <button
