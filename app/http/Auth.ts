@@ -105,6 +105,123 @@ export interface UserProfile {
     staff_no?: string;
 }
 
+// --- Organization & Department Types ---
+
+export interface Department {
+    ID: number;
+    Name: string;
+    InviteCode: string; // 8-char invite code
+    CounselorID: number;
+    CreatedAt: string;
+}
+
+// Reusing UserProfile mostly, but defining a lightweight Student interface for lists
+export interface Student {
+    ID: number;
+    Nickname: string;
+    Email: string;
+    StudentNo?: string;
+    DepartmentID?: number;
+    // Allow flexible casing matching backend JSON serialization
+    nickname?: string;
+    email?: string;
+    student_no?: string;
+}
+
+export interface DepartmentDetailResponse {
+    deptDetails: Department;
+    students: Student[];
+}
+
+export interface CreateOrgResponse {
+    message: string;
+    id: number;
+    invite_code: string;
+}
+
+// --- Class Types ---
+
+export interface Class {
+    ID: number;
+    Name: string;
+    InviteCode: string;
+    TeacherID: number;
+    CreatedAt: string;
+}
+
+export interface ClassDetailResponse {
+    classDetails: Class;
+    students: Student[];
+}
+
+export interface CreateClassResponse {
+    message: string;
+    id: number;
+    invite_code: string;
+}
+
+/**
+ * Fetch Departments created by the current user (Counselor).
+ * Backend route: GET /departments/mine
+ */
+export async function fetchMyDepartments(token: string): Promise<Department[]> {
+    const response = await fetch(`${API_BASE_URL}/departments/mine`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch departments");
+    }
+
+    return response.json();
+}
+
+/**
+ * Create a new department (Counselor).
+ * Backend route: POST /departments
+ */
+export async function createDepartment(token: string, name: string): Promise<CreateOrgResponse> {
+    const response = await fetch(`${API_BASE_URL}/departments`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create department");
+    }
+
+    return response.json();
+}
+
+/**
+ * Fetch details and students for a specific department.
+ * Backend route: GET /departments/mine/:deptId
+ */
+export async function fetchDepartmentDetail(token: string, deptId: number): Promise<DepartmentDetailResponse> {
+    const response = await fetch(`${API_BASE_URL}/departments/mine/${deptId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch department details");
+    }
+
+    return response.json();
+}
+
 /**
  * Fetch dashboard statistics (Counselor view)
  * Backend route is POST /leaves/leavebackinfo
@@ -146,6 +263,68 @@ export async function fetchUserProfile(token: string): Promise<UserProfile> {
 
     if (!response.ok) {
         throw new Error("Failed to fetch user profile");
+    }
+
+    return response.json();
+}
+
+/**
+ * Fetch Classes created by the current user (Teacher).
+ * Backend route: GET /classes/mine
+ */
+export async function fetchMyClasses(token: string): Promise<Class[]> {
+    const response = await fetch(`${API_BASE_URL}/classes/mine`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch classes");
+    }
+
+    return response.json();
+}
+
+/**
+ * Create a new class (Teacher).
+ * Backend route: POST /classes
+ */
+export async function createClass(token: string, name: string): Promise<CreateClassResponse> {
+    const response = await fetch(`${API_BASE_URL}/classes`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create class");
+    }
+
+    return response.json();
+}
+
+/**
+ * Fetch details and students for a specific class.
+ * Backend route: GET /classes/mine/:classId
+ */
+export async function fetchClassDetail(token: string, classId: number): Promise<ClassDetailResponse> {
+    const response = await fetch(`${API_BASE_URL}/classes/mine/${classId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch class details");
     }
 
     return response.json();

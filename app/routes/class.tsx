@@ -1,57 +1,262 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { 
+    fetchMyClasses, 
+    fetchClassDetail, 
+    createClass,
+    type Class, 
+    type Student 
+} from "../http/Auth";
+
+// Extend Class to hold UI state and student list locally
+interface ClassWithState extends Class {
+    isOpen: boolean;
+    isLoading: boolean;
+    students?: Student[]; // Loaded on demand
+}
 
 export default function MyClass() {
-  const [classes] = useState([
-    {
-      id: 1,
-      name: "2024级 计算机科学与技术 1班",
-      students: [
-        { id: 101, name: "张三", number: "2024001" },
-        { id: 102, name: "李四", number: "2024002" },
-        { id: 103, name: "王五", number: "2024003" },
-      ]
-    },
-    {
-      id: 2,
-      name: "英语辅修班",
-      students: [
-        { id: 201, name: "张三", number: "2024001" },
-        { id: 202, name: "赵六", number: "2024008" },
-      ]
+  const navigate = useNavigate();
+  const [classes, setClasses] = useState<ClassWithState[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newClassName, setNewClassName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Initial load: Fetch list of classes
+  const loadClasses = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/login");
+            return;
+        }
+        try {
+            const data = await fetchMyClasses(token);
+            // Initialize UI state
+            const uiData = data.map(c => ({ 
+                ...c, 
+                isOpen: false, 
+                isLoading: false,
+             }));
+            setClasses(uiData);
+        } catch (error) {
+            console.error("Failed to load classes", error);
+        } finally {
+            setLoading(false);
+        }
+  };
+
+  useEffect(() => {
+    loadClasses();
+  }, [navigate]);
+
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const token = localStorage.getItem("token");
+      if (!token || !newClassName.trim()) return;
+
+      setSubmitting(true);
+      try {
+          await createClass(token, newClassName);
+          setIsModalOpen(false);
+          setNewClassName("");
+          // Refresh the list to show the new class
+          await loadClasses();
+          alert("班级创建成功！");
+      } catch (error: any) {
+          alert(`创建失败: ${error.message}`);
+      } finally {
+          setSubmitting(false);
+      }
+  };
+
+  // Handle expand/collapse logic
+  const toggleClass = async (classId: number) => {
+    setClasses(prev => prev.map(c => {
+        if (c.ID !== classId) return c;
+        return { ...c, isOpen: !c.isOpen };
+    }));
+
+    const target = classes.find(c => c.ID === classId);
+    if (!target) return;
+
+    // If opening and students not loaded yet, fetch them
+    if (!target.isOpen && !target.students) {
+        setClasses(prev => prev.map(c => c.ID === classId ? { ...c, isLoading: true } : c));
+        
+        try {
+            const token = localStorage.getItem("token") || "";
+            const detail = await fetchClassDetail(token, classId);
+            
+            setClasses(prev => prev.map(c => {
+                if (c.ID !== classId) return c;
+                return { 
+                    ...c, 
+                    isLoading: false, 
+                    students: detail.students || [] 
+                };
+            }));
+        } catch (error) {
+            console.error(error);
+            setClasses(prev => prev.map(c => c.ID === classId ? { ...c, isLoading: false } : c));
+        }
     }
-  ]);
+  };
+
+  // Helper to handle casing differences
+  const getStudentName = (s: Student) => s.Nickname || s.nickname || "Unknown";
+  const getStudentNo = (s: Student) => s.StudentNo || s.student_no || "-";
+
+  if (loading) return <div className="p-6">加载班级信息中...</div>;
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">我的班级</h2>
-      <div className="grid gap-4">
-        {classes.map((cls) => (
-          <details key={cls.id} className="bg-white rounded-lg shadow-sm border border-gray-200 group">
-            <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
-              <span className="text-lg font-medium">{cls.name}</span>
-              <span className="transform group-open:rotate-180 transition-transform">▼</span>
-            </summary>
-            <div className="px-4 pb-4 border-t border-gray-100 pt-2 text-sm text-gray-600">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="py-2">学号</th>
-                    <th className="py-2">姓名</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cls.students.map((student) => (
-                    <tr key={student.id}>
-                      <td className="py-2">{student.number}</td>
-                      <td className="py-2">{student.name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </details>
-        ))}
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-800">我的班级 (教学管理)</h2>
+        <button 
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700 transition shadow-sm flex items-center gap-1"
+            onClick={() => setIsModalOpen(true)}
+        >
+            <span className="text-lg leading-none">+</span> 创建班级
+        </button>
       </div>
-    </div>
-  );
+
+      {classes.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg border border-gray-100 text-gray-400">
+              暂无管理的班级
+          </div>
+      ) : (
+        <div className="grid gap-4">
+            {classes.map((cls) => (
+            <div 
+                key={cls.ID} 
+                className={`bg-white rounded-lg shadow-sm border transition-all duration-200 overflow-hidden ${cls.isOpen ? 'ring-2 ring-indigo-50 border-indigo-100' : 'border-gray-200'}`}
+            >
+                {/* Header (Summary) */}
+                <div 
+                    onClick={() => toggleClass(cls.ID)}
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 bg-white select-none z-10 relative"
+                >
+                    <div className="flex flex-col">
+                        <span className="text-lg font-medium text-gray-800">{cls.Name}</span>
+                        <div className="flex items-center gap-4 mt-1">
+                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                邀请码: <span className="font-mono font-bold text-indigo-600 select-all">{cls.InviteCode}</span>
+                             </span>
+                             <span className="text-xs text-gray-400">ID: {cls.ID}</span>
+                        </div>
+                    </div>
+                   
+                    <span className={`transform transition-transform duration-200 text-gray-400 ${cls.isOpen ? 'rotate-180' : ''}`}>
+                        ▼
+                    </span>
+                </div>
+
+                {/* Dropdown Content */}
+                {cls.isOpen && (
+                    <div className="border-t border-gray-100 bg-gray-50/50">
+                        {cls.isLoading ? (
+                            <div className="p-4 text-center text-sm text-gray-500">加载成员列表...</div>
+                        ) : (
+                            <div className="px-4 pb-4 pt-2">
+                                {(!cls.students || cls.students.length === 0) ? (
+                                    <div className="py-4 text-center text-sm text-gray-400">该班级暂无学生加入</div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-sm">
+                                            <thead>
+                                            <tr className="border-b border-gray-200 text-gray-500">
+                                                <th className="py-3 px-2 font-medium">学号</th>
+                                                <th className="py-3 px-2 font-medium">姓名</th>
+                                                <th className="py-3 px-2 font-medium">邮箱</th>
+                                                <th className="py-3 px-2 font-medium text-right">操作</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {cls.students.map((student) => (
+                                                <tr key={student.ID} className="border-b border-gray-100 hover:bg-white transition-colors">
+                                                    <td className="py-3 px-2 font-mono text-gray-600">{getStudentNo(student)}</td>
+                                                    <td className="py-3 px-2 font-medium text-gray-900">{getStudentName(student)}</td>
+                                                    <td className="py-3 px-2 text-gray-500">{student.Email}</td>
+                                                    <td className="py-3 px-2 text-right">
+                                                        <button className="text-indigo-600 hover:text-indigo-800 text-xs">查看详情</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+            ))}
+        </div>
+      )}
+
+      {/* Create Class Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 className="text-lg font-semibold text-gray-800">创建新班级</h3>
+                    <button 
+                        onClick={() => setIsModalOpen(false)}
+                        className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                    >
+                        ✕
+                    </button>
+                </div>
+                
+                <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            班级名称
+                        </label>
+                        <input
+                            type="text"
+                            value={newClassName}
+                            onChange={(e) => setNewClassName(e.target.value)}
+                            placeholder="例如：高等数学A班"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                            autoFocus
+                            required
+                        />
+                        <p className="mt-2 text-xs text-gray-500">
+                            创建后将自动生成8位邀请码，学生通过该码加入班级。
+                        </p>
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-6">
+                        <button
+                            type="button"
+                            onClick={() => setIsModalOpen(false)}
+                            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium transition-colors"
+                        >
+                            取消
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 text-sm font-medium disabled:opacity-70 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                        >
+                            {submitting && (
+                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            )}
+                            {submitting ? "提交中..." : "立即创建"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
+</div>
+);
 }
