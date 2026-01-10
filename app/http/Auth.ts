@@ -329,3 +329,75 @@ export async function fetchClassDetail(token: string, classId: number): Promise<
 
     return response.json();
 }
+
+// --- Leave Types ---
+
+/**
+ * Matches the map structure returned by GORM query in ListPendingLeaves
+ * Keys are snake_case from database columns
+ */
+export interface LeaveRequest {
+    id: number;
+    created_at: string;
+    updated_at: string;
+    student_id: number;
+    student_name: string; // From joined query 'users.nickname as student_name'
+    type: string;
+    start_time: string;
+    end_time: string;
+    reason: string;
+    status: string; // "pending", "approved", "rejected"
+}
+
+export interface AuditLeavePayload {
+    leave_id: number;
+    status: "approved" | "rejected";
+}
+
+/**
+ * Fetch pending leaves for the current counselor.
+ * Backend route: GET /leaves/pending
+ */
+export async function fetchPendingLeaves(token: string): Promise<LeaveRequest[]> {
+    const response = await fetch(`${API_BASE_URL}/leaves/pending`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        // Backend might return empty list as null or 404 in some legacy setups, 
+        // but normally 200 OK with empty array.
+        const text = await response.text();
+        try {
+            const json = JSON.parse(text);
+            throw new Error(json.error || "Failed to fetch pending leaves");
+        } catch (e) {
+            throw new Error(`Failed to fetch pending leaves: ${text}`);
+        }
+    }
+
+    return response.json();
+}
+
+/**
+ * Audit a leave request (Approve/Reject).
+ * Backend route: POST /leaves/audit
+ */
+export async function auditLeave(token: string, payload: AuditLeavePayload): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/leaves/audit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to audit leave");
+    }
+}
