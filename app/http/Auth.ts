@@ -401,3 +401,140 @@ export async function auditLeave(token: string, payload: AuditLeavePayload): Pro
         throw new Error(err.error || "Failed to audit leave");
     }
 }
+
+// --- Ding (Check-in) Types ---
+
+export interface DingTask {
+    ID: number;
+    CreatedAt: string;
+    Title: string;
+    description?: string; // Note: Model might stick to Title/Type, check strict definitions
+    StartTime: string;
+    Deadline: string;
+    Type: string; // "sign_in" | "dorm_check" etc.
+}
+
+export interface DingRecord {
+    id: number;
+    student_id: number;
+    student_name: string;
+    student_no: string;
+    status: "pending" | "complete" | "late";
+    ding_time?: string;
+    photo_url?: string;
+    location?: string;
+}
+
+export interface DingListResponse {
+    dings: DingTask[];
+}
+
+// 对应后端 internal/DTO/dingDTO.go 中的 CreateDingRequest
+export interface CreateDingPayload {
+    title: string;
+    start_time: string; // RFC3339 格式: 2024-01-01T12:00:00Z
+    end_time: string;   
+    latitude: number;   // 必填
+    longitude: number;  // 必填
+    radius: number;     // 必填
+    type: string;       // 必填
+    
+    // 后端通过判断哪个字段不为 0 来决定发送范围
+    dept_id?: number;   
+    class_id?: number;
+    student_id?: number;
+}
+
+export interface DingRecordsResponse {
+    records: DingRecord[];
+}
+
+/**
+ * Create a new Ding task (Check-in).
+ * Backend route: POST /dings/createdings
+ */
+export async function createDing(token: string, payload: CreateDingPayload): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/dings/createdings`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "发布打卡任务失败");
+    }
+}
+
+/**
+ * Fetch dings created by the current user (Counselor/Teacher).
+ * Backend route: GET /dings/mycreateddings
+ */
+export async function fetchMyCreatedDings(token: string): Promise<DingTask[]> {
+    const response = await fetch(`${API_BASE_URL}/dings/mycreateddings`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch created dings");
+    }
+
+    const data: DingListResponse = await response.json();
+    return data.dings || [];
+}
+
+/**
+ * Fetch records (student status) for a specific ding.
+ * Backend route: GET /dings/mycreateddingsrecords/:dingId
+ */
+export async function fetchDingRecords(token: string, dingId: number): Promise<DingRecord[]> {
+    const response = await fetch(`${API_BASE_URL}/dings/mycreateddingsrecords/${dingId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch ding records");
+    }
+
+    const data: DingRecordsResponse = await response.json();
+    return data.records || [];
+}
+
+export interface DingStats {
+    total_count: number;
+    checked_count: number;
+    missed_count: number;
+}
+
+/**
+ * Fetch aggregated statistics for created dings.
+ * Backend route: GET /dings/stats
+ */
+export async function fetchDingStats(token: string): Promise<DingStats> {
+    const response = await fetch(`${API_BASE_URL}/dings/stats`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        console.warn("Failed to fetch ding stats");
+        // 返回0防止页面崩溃
+        return { total_count: 0, checked_count: 0, missed_count: 0 };
+    }
+
+    return response.json();
+}

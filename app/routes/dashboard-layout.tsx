@@ -40,9 +40,9 @@ export default function DashboardLayout() {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col transition-all duration-300">
-        <div className="p-4 border-b border-slate-700">
-          <h2 className="text-xl font-bold">Unihub Board</h2>
+      <aside className="w-64 bg-slate-900 text-white flex flex-col transition-all duration-300 center">
+        <div className="p-4 border-b border-slate-700 m-0 center">
+          <h2 className="text-xl font-bold center m-auto">Unihub Board</h2>
         </div>
         
         <nav className="flex-1 min-h-0 overflow-y-auto py-4">
@@ -69,16 +69,63 @@ export default function DashboardLayout() {
               </NavLink>
             </li>
             <li>
-              <NavLink 
-                to="/class" 
-                className={({ isActive }) => 
-                  `block px-4 py-2 rounded-md ${isActive ? 'bg-indigo-600' : 'hover:bg-slate-800'}`
-                }
-              >
-                我的班级
-              </NavLink>
+                 <NavLink 
+                    to="/class" 
+                    className={({ isActive }) => 
+                      `block px-4 py-2 rounded-md ${isActive ? 'bg-indigo-600' : 'hover:bg-slate-800'}`
+                    }
+                  >
+                    📚 班级管理
+                  </NavLink>
             </li>
+
+            {/* Ding Management Dropdown */}
             <li>
+                <details className="group">
+                    <summary className="flex items-center justify-between px-4 py-2 rounded-md hover:bg-slate-800 cursor-pointer select-none text-slate-200">
+                        <span className="flex items-center gap-2">📍 打卡管理</span>
+                        <span className="transform transition-transform text-xs group-open:rotate-180">▼</span>
+                    </summary>
+                    <ul className="pl-4 mt-1 space-y-1">
+                        <li>
+                            <NavLink 
+                                to="/check-in" 
+                                className={({ isActive }) => 
+                                `block px-4 py-2 rounded-md text-sm ${isActive ? 'bg-indigo-600' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`
+                                }
+                            >
+                                + 发布新打卡
+                            </NavLink>
+                        </li>
+                         <li>
+                            <NavLink 
+                                to="/dings?view=normal" 
+                                className={({ isActive, isPending }) => {
+                                    // Custom active check for query params if needed, or rely on URL matching
+                                    // Simple string includes check works for this specific structure
+                                    const isNormal = location.pathname === '/dings' && location.search.includes('view=normal');
+                                    return `block px-4 py-2 rounded-md text-sm ${isNormal ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`
+                                }}
+                            >
+                                📋 常规任务列表
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink 
+                                to="/dings?view=return" 
+                                className={({ isActive }) => {
+                                    const isReturn = location.pathname === '/dings' && location.search.includes('view=return');
+                                   return `block px-4 py-2 rounded-md text-sm ${isReturn ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`
+                                }}
+                            >
+                                🔙 返校销假记录
+                            </NavLink>
+                        </li>
+                    </ul>
+                </details>
+            </li>
+
+            <li className="mt-4 pt-4 border-t border-slate-700">
               <NavLink 
                 to="/leave-approval" 
                 className={({ isActive }) => 

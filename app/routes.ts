@@ -11,6 +11,7 @@ export default [
     route("organization", "routes/organization.tsx"),
     route("class", "routes/class.tsx"),
     route("leave-approval", "routes/leave-approval.tsx"),
+    route("dings", "routes/ding-list.tsx"),
     route("check-in", "routes/check-in.tsx"),
     route("profile", "routes/profile.tsx"),
   ]),
