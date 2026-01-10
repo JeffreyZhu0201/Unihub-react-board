@@ -23,6 +23,8 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+import { GlobalAlertProvider } from "./components/GlobalAlert";
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -33,7 +35,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <GlobalAlertProvider>
+          {children}
+        </GlobalAlertProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
