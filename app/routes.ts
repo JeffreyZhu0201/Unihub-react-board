@@ -1,18 +1,17 @@
-import { type RouteConfig, index, route, layout } from "@react-router/dev/routes";
+import { type RouteConfig, index, layout, route } from "@react-router/dev/routes";
 
 export default [
-  // Auth routes
-  route("login", "routes/login.tsx"),
-  route("register", "routes/register.tsx"),
-
-  // Dashboard routes (protected by layout)
   layout("routes/dashboard-layout.tsx", [
     index("routes/home.tsx"),
+    route("profile", "routes/profile.tsx"),
     route("organization", "routes/organization.tsx"),
     route("class", "routes/class.tsx"),
-    route("leave-approval", "routes/leave-approval.tsx"),
-    route("dings", "routes/ding-list.tsx"),
     route("check-in", "routes/check-in.tsx"),
-    route("profile", "routes/profile.tsx"),
+    route("dings", "routes/ding-list.tsx"),
+    route("leave-approval", "routes/leave-approval.tsx"),
+    route("leave-return", "routes/leave-return.tsx"),
+    route("notifications", "routes/notifications.tsx"),
   ]),
+  route("login", "routes/login.tsx"),
+  route("register", "routes/register.tsx"),
 ] satisfies RouteConfig;

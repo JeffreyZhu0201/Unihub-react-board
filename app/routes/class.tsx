@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import QRCode from "react-qr-code"; // Ensure react-qr-code is installed
 import { 
     fetchMyClasses, 
     fetchClassDetail, 
@@ -12,7 +13,7 @@ import {
 interface ClassWithState extends Class {
     isOpen: boolean;
     isLoading: boolean;
-    students?: Student[]; // Loaded on demand
+    students?: Student[];
 }
 
 export default function MyClass() {
@@ -24,6 +25,9 @@ export default function MyClass() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newClassName, setNewClassName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // QR Code State
+  const [qrClass, setQrClass] = useState<{name: string, code: string} | null>(null);
 
   // Initial load: Fetch list of classes
   const loadClasses = async () => {
@@ -62,7 +66,6 @@ export default function MyClass() {
           await createClass(token, newClassName);
           setIsModalOpen(false);
           setNewClassName("");
-          // Refresh the list to show the new class
           await loadClasses();
           alert("班级创建成功！");
       } catch (error: any) {
@@ -72,7 +75,6 @@ export default function MyClass() {
       }
   };
 
-  // Handle expand/collapse logic
   const toggleClass = async (classId: number) => {
     setClasses(prev => prev.map(c => {
         if (c.ID !== classId) return c;
@@ -82,7 +84,6 @@ export default function MyClass() {
     const target = classes.find(c => c.ID === classId);
     if (!target) return;
 
-    // If opening and students not loaded yet, fetch them
     if (!target.isOpen && !target.students) {
         setClasses(prev => prev.map(c => c.ID === classId ? { ...c, isLoading: true } : c));
         
@@ -105,7 +106,6 @@ export default function MyClass() {
     }
   };
 
-  // Helper to handle casing differences
   const getStudentName = (s: Student) => s.Nickname || s.nickname || "Unknown";
   const getStudentNo = (s: Student) => s.StudentNo || s.student_no || "-";
 
@@ -149,9 +149,24 @@ export default function MyClass() {
                         </div>
                     </div>
                    
-                    <span className={`transform transition-transform duration-200 text-gray-400 ${cls.isOpen ? 'rotate-180' : ''}`}>
-                        ▼
-                    </span>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setQrClass({ name: cls.Name, code: cls.InviteCode });
+                            }}
+                            className="p-2 text-gray-400 hover:text-indigo-600 transition-colors"
+                            title="显示班级二维码"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zm-6 12v-2m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> 
+                                <path d="M10 10h.01M14 10h.01M10 14h.01M14 14h.01" strokeWidth={3}/> 
+                            </svg>
+                        </button>
+                        <span className={`transform transition-transform duration-200 text-gray-400 ${cls.isOpen ? 'rotate-180' : ''}`}>
+                            ▼
+                        </span>
+                    </div>
                 </div>
 
                 {/* Dropdown Content */}
@@ -244,12 +259,6 @@ export default function MyClass() {
                             disabled={submitting}
                             className="px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 text-sm font-medium disabled:opacity-70 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                         >
-                            {submitting && (
-                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            )}
                             {submitting ? "提交中..." : "立即创建"}
                         </button>
                     </div>
@@ -257,6 +266,43 @@ export default function MyClass() {
             </div>
         </div>
       )}
-</div>
-);
+
+     {/* QR Code Modal for Class */}
+      {qrClass && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setQrClass(null)}>
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6" onClick={e => e.stopPropagation()}>
+                <div className="text-center mb-6">
+                    <h3 className="text-xl font-bold text-gray-900">{qrClass.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1">扫码加入班级</p>
+                </div>
+                
+                <div className="flex justify-center p-4 bg-white rounded-lg">
+                    <QRCode 
+                        value={JSON.stringify({
+                            type: 'class', 
+                            code: qrClass.code,
+                            action: 'join_class' // Marker for mobile app logic
+                        })} 
+                        size={200}
+                        viewBox={`0 0 256 256`}
+                    />
+                </div>
+
+                <div className="text-center mt-6">
+                     <p className="text-indigo-600 font-mono font-bold text-xl tracking-wider">{qrClass.code}</p>
+                     <p className="text-xs text-gray-400 mt-2">班级邀请码</p>
+                </div>
+
+                <button 
+                    onClick={() => setQrClass(null)}
+                    className="mt-6 w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                >
+                    关闭
+                </button>
+            </div>
+        </div>
+      )}
+
+    </div>
+  );
 }

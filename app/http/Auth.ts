@@ -538,3 +538,32 @@ export async function fetchDingStats(token: string): Promise<DingStats> {
 
     return response.json();
 }
+
+// --- Notification Types ---
+
+export interface CreateNotificationPayload {
+    title: string;
+    content: string;
+    target_type: "dept" | "class";
+    target_id: number;
+}
+
+/**
+ * Create a new Notification.
+ * Backend route: POST /notifications
+ */
+export async function createNotification(token: string, payload: CreateNotificationPayload): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/notifications`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "发布通知失败");
+    }
+}

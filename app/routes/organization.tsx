@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import QRCode from "react-qr-code"; // Ensure this package is installed: npm install react-qr-code
 import { useAlert } from "../components/GlobalAlert";
 import { 
     fetchMyDepartments, 
@@ -20,12 +21,17 @@ export default function Organization() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
   const [departments, setDepartments] = useState<DepartmentWithState[]>([]);
+  
+  // existing state...
   const [loading, setLoading] = useState(true);
   
-  // Modal State
+  // Modal State for Create Dept
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newDeptName, setNewDeptName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // QR Mobile State
+  const [qrDept, setQrDept] = useState<{name: string, code: string} | null>(null);
 
   // Initial load: Fetch list of departments
   const loadDepts = async () => {
@@ -127,6 +133,7 @@ export default function Organization() {
         </button>
       </div>
 
+      {/* Department List */}
       {departments.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-100 text-gray-400">
               暂无管理的部门
@@ -153,18 +160,34 @@ export default function Organization() {
                         </div>
                     </div>
                    
-                    <span className={`transform transition-transform duration-200 text-gray-400 ${dept.isOpen ? 'rotate-180' : ''}`}>
-                        ▼
-                    </span>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setQrDept({ name: dept.Name, code: dept.InviteCode });
+                            }}
+                            className="p-2 text-gray-400 hover:text-indigo-600 transition-colors"
+                            title="显示二维码"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zm-6 12v-2m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> 
+                                <path d="M10 10h.01M14 10h.01M10 14h.01M14 14h.01" strokeWidth={3}/> 
+                            </svg>
+                        </button>
+                        <span className={`transform transition-transform duration-200 text-gray-400 ${dept.isOpen ? 'rotate-180' : ''}`}>
+                            ▼
+                        </span>
+                    </div>
                 </div>
 
                 {/* Dropdown Content */}
                 {dept.isOpen && (
                     <div className="border-t border-gray-100 bg-gray-50/50">
                         {dept.isLoading ? (
-                            <div className="p-4 text-center text-sm text-gray-500">加载成员列表...</div>
+                             <div className="p-4 text-center text-sm text-gray-500">加载成员列表...</div>
                         ) : (
-                            <div className="px-4 pb-4 pt-2">
+                             <div className="px-4 pb-4 pt-2">
+                                {/* ...existing code... */}
                                 {(!dept.students || dept.students.length === 0) ? (
                                     <div className="py-4 text-center text-sm text-gray-400">该部门暂无学生加入</div>
                                 ) : (
@@ -258,6 +281,42 @@ export default function Organization() {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+      )}
+
+      {/* QR Code Modal for Dept */}
+      {qrDept && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setQrDept(null)}>
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6" onClick={e => e.stopPropagation()}>
+                <div className="text-center mb-6">
+                    <h3 className="text-xl font-bold text-gray-900">{qrDept.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1">扫码加入部门</p>
+                </div>
+                
+                <div className="flex justify-center p-4 bg-white rounded-lg">
+                    <QRCode 
+                        value={JSON.stringify({
+                            type: 'dept', 
+                            code: qrDept.code,
+                            action: 'join_dept' // Marker for mobile app
+                        })} 
+                        size={200}
+                        viewBox={`0 0 256 256`}
+                    />
+                </div>
+
+                <div className="text-center mt-6">
+                     <p className="text-indigo-600 font-mono font-bold text-xl tracking-wider">{qrDept.code}</p>
+                     <p className="text-xs text-gray-400 mt-2">部门邀请码</p>
+                </div>
+
+                <button 
+                    onClick={() => setQrDept(null)}
+                    className="mt-6 w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                >
+                    关闭
+                </button>
             </div>
         </div>
       )}

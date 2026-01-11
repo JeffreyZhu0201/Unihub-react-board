@@ -145,6 +145,28 @@ export default function DashboardLayout() {
                 📍 签到打卡
               </NavLink>
             </li>
+            <li>
+                <NavLink 
+                    to="/dings" 
+                    className={({ isActive }) => 
+                    `block px-4 py-2 rounded-md ${isActive ? 'bg-indigo-600' : 'hover:bg-slate-800'}`
+                    }
+                >
+                    📍 打卡任务
+                </NavLink>
+            </li>
+
+            {/* Add Notification Link */}
+            <li>
+                <NavLink 
+                    to="/notifications" 
+                    className={({ isActive }) => 
+                    `block px-4 py-2 rounded-md ${isActive ? 'bg-indigo-600' : 'hover:bg-slate-800'}`
+                    }
+                >
+                    🔔 通知中心
+                </NavLink>
+            </li>
           </ul>
         </nav>
 
