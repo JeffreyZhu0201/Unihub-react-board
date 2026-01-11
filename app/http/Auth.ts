@@ -1,7 +1,7 @@
 // api/auth.ts
 
 // --- API Configuration ---
-const API_BASE_URL = 'http://127.0.0.1:8080/api/v1';
+export const API_BASE_URL = 'http://127.0.0.1:8080/api/v1';
 
 export interface ApiResponse<T = any> {
   token? : string
@@ -566,4 +566,28 @@ export async function createNotification(token: string, payload: CreateNotificat
         const err = await response.json();
         throw new Error(err.error || "发布通知失败");
     }
+}
+
+/**
+ * Generic Export to Excel.
+ * Backend route: POST /exportListOfObjectsUploaded
+ * Payload: { data: [] }
+ * Returns: { filePath: string }
+ */
+export async function exportDataToExcel(token: string, data: any[]): Promise<string> {
+    const response = await fetch(`${API_BASE_URL}/exportListOfObjectsUploaded`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ data })
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to export data");
+    }
+
+    const res = await response.json();
+    return res.filePath; // e.g., "resources/Export/Sheet1_123.xlsx"
 }

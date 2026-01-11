@@ -11,6 +11,7 @@ export default [
     route("leave-approval", "routes/leave-approval.tsx"),
     route("leave-return", "routes/leave-return.tsx"),
     route("notifications", "routes/notifications.tsx"),
+    route("data-export", "routes/data-export.tsx"), // <-- Added this line
   ]),
   route("login", "routes/login.tsx"),
   route("register", "routes/register.tsx"),
