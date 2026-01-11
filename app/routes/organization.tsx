@@ -18,6 +18,7 @@ interface DepartmentWithState extends Department {
 
 export default function Organization() {
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
   const [departments, setDepartments] = useState<DepartmentWithState[]>([]);
   const [loading, setLoading] = useState(true);
   
