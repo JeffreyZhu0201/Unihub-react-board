@@ -135,6 +135,17 @@ export default function DashboardLayout() {
                 📝 请假管理
               </NavLink>
             </li>
+            {/* Add Notification Link */}
+            <li>
+                <NavLink 
+                    to="/notifications" 
+                    className={({ isActive }) => 
+                    `block px-4 py-2 rounded-md ${isActive ? 'bg-indigo-600' : 'hover:bg-slate-800'}`
+                    }
+                >
+                    🔔 发布通知
+                </NavLink>
+            </li>
             <li>
               <NavLink 
                 to="/check-in" 
